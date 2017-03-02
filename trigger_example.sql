@@ -5,8 +5,8 @@ ALTER SESSION SET NLS_DATE_FORMAT = 'DD-MON-YYYY HH24:MI:SS' NLS_DATE_LANGUAGE =
 /* Create table employees */
 
 CREATE TABLE employees
-  ( employee_id           number(10)      not null,
-     last_name            varchar2(50)      not null,
+  ( employee_id           number(10)        NOT NULL,
+     last_name            varchar2(50)      NOT NULL,
      email                varchar2(30),
      hire_date            date,
      job_id               varchar2(30),
@@ -112,8 +112,3 @@ CREATE OR REPLACE TYPE address_type AS OBJECT (
 /
 
 SELECT * FROM ddl_creations;
-
-
-
-
-
