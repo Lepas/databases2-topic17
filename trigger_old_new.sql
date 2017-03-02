@@ -43,72 +43,58 @@ INSERT INTO employees( employee_id, last_name, email, hire_date, job_id, salary,
                  VALUES( 1008, 'Oracle', 'wvelasq@g.com', SYSDATE, 'DBA', 20000, 4, 1006);
 
 /* Create table for logs */
-				 
-CREATE TABLE employees_log(
-     who varchar2(30),
-     when date);
-	 
-/* Create trigger to save in logs before changing data */
 
-CREATE OR REPLACE TRIGGER biud_employees_copy
-BEFORE INSERT OR UPDATE OR DELETE ON employees
+CREATE TABLE log_emp_table
+ (who VARCHAR2(30),
+ when DATE,
+ which_employee VARCHAR2(10), 
+  old_salary NUMBER(6), 
+  new_salary NUMBER(6)
+);
+
+/* Trigger for each row */
+
+CREATE OR REPLACE TRIGGER log_emps
+AFTER UPDATE OF salary ON employees FOR EACH ROW
 BEGIN
-	INSERT INTO employees_log(who, when) VALUES (user, sysdate);
+	INSERT INTO log_emp_table (who, when, which_employee, old_salary, new_salary)
+	VALUES (USER, SYSDATE, :OLD.employee_id, :OLD.salary, :NEW.salary);
 END;
 /
 
-/* Update salaries by 10%  */
+SELECT employee_id, department_id, salary FROM employees;
 
-UPDATE employees SET salary = salary * 1.1;
-SELECT last_name, department_id, salary FROM employees;
+/* Update selected rows */
 
-/* Logs show 2 triggers executed, even though delete was not executed */
+UPDATE employees SET salary = salary * 1.1 WHERE department_id = 4;
+SELECT employee_id, department_id, salary FROM employees;
 
-DELETE FROM employees WHERE department_id = 10;
-SELECT * FROM employees_log;
+SELECT * FROM log_emp_table;
 
-/* Create trigger to save in logs after changing data */
 
-CREATE OR REPLACE TRIGGER log_sum_change_trigger
-AFTER UPDATE OF salary ON employees
+
+CREATE TABLE audit_emp
+ (user_name VARCHAR2(30),
+ time_stamp DATE,
+ id VARCHAR2(10), 
+ old_last_name VARCHAR2(30),
+ new_last_name VARCHAR2(30),
+ old_title VARCHAR2(30),
+ new_title VARCHAR2(30),
+  old_salary NUMBER(6), 
+  new_salary NUMBER(6)
+);
+
+CREATE OR REPLACE TRIGGER audit_emp_values
+AFTER DELETE OR INSERT OR UPDATE ON employees FOR EACH ROW
 BEGIN
-	INSERT INTO employees_log(who, when) VALUES (user, sysdate);
+	INSERT INTO audit_emp(user_name, time_stamp, id, old_last_name, new_last_name, old_title, new_title, old_salary, new_salary)
+	VALUES (USER, CURRENT_TIMESTAMP, :OLD.employee_id, :OLD.last_name, :NEW.last_name, :OLD.job_id, :NEW.job_id, :OLD.salary, :NEW.salary);
 END;
 /
 
-/* Logs show 4 triggers executed */
+INSERT INTO employees (employee_id, last_name, job_id, salary) VALUES (999, 'Temp emp', 'SA_REP', 1000);
 
-UPDATE employees SET salary = salary * 1.1;
-SELECT last_name, department_id, salary FROM employees;
-SELECT * FROM employees_log;
-
-/* This trigger needs admin privileges */
-
-DISCONNECT;
-CONNECT system/class;
-
-CREATE TABLE ddl_creations (
-    user_id       VARCHAR2(30),
-    object_type   VARCHAR2(20),
-    object_name   VARCHAR2(30),
-    object_owner  VARCHAR2(30),
-    creation_date DATE);
-
-CREATE OR REPLACE TRIGGER LogCreations
-AFTER CREATE ON DATABASE
-BEGIN
-    INSERT INTO ddl_creations (user_id, object_type, object_name, object_owner, creation_date)
-    VALUES (USER, SYS.DICTIONARY_OBJ_TYPE, SYS.DICTIONARY_OBJ_NAME, SYS.DICTIONARY_OBJ_OWNER, SYSDATE);
-END LogCreations;
-/
-
-/* Execute trigger */
-
-SELECT * FROM ddl_creations;
-
-CREATE OR REPLACE TYPE address_type AS OBJECT (
-	street VARCHAR2(20),
-	st_num VARCHAR2(5));
-/
-
-SELECT * FROM ddl_creations;
+SELECT employee_id, last_name, job_id, salary FROM employees;
+UPDATE employees SET salary = 2000, last_name = 'Smith' WHERE employee_id = 999;
+SELECT user_name AS "UN", time_stamp AS "TIME", id, old_last_name AS "OLD LN", new_last_name "NEW LN", old_title AS "OT", new_title AS "NT", old_salary AS "OS", new_salary AS "NS" from audit_emp;
